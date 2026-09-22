@@ -1,16 +1,19 @@
 /* CareRelay — domain logic: readiness expiry, referral state machine, bundle, offline sync */
 const KEY = 'carerelay.v3';
+/* Offline store shim: an in-memory key/value store standing in for the device
+   database (IndexedDB/SQLite in production). Keeps the prototype embeddable. */
+const STORE = { _m: {}, getItem(k) { return this._m[k] || null; }, setItem(k, v) { this._m[k] = v; }, removeItem(k) { delete this._m[k]; } };
 let DB = load();
 
 function load() {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = STORE.getItem(KEY);
     if (raw) { const d = JSON.parse(raw); if (d.meta && d.meta.version === 3) return d; }
   } catch (e) {}
-  const d = seed(); localStorage.setItem(KEY, JSON.stringify(d)); return d;
+  const d = seed(); STORE.setItem(KEY, JSON.stringify(d)); return d;
 }
-function save() { localStorage.setItem(KEY, JSON.stringify(DB)); }
-function resetDB() { localStorage.removeItem(KEY); DB = load(); }
+function save() { STORE.setItem(KEY, JSON.stringify(DB)); }
+function resetDB() { STORE.removeItem(KEY); DB = load(); }
 const uid = (p) => p + '-' + Math.random().toString(36).slice(2, 7).toUpperCase();
 const by = (arr, id) => arr.find(x => x.id === id);
 const fac = id => (by(DB.facilities, id) || { name: '—' }).name;
